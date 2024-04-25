@@ -1,50 +1,7 @@
 #!/bin/bash
 fname="ultimate-nmap-parser.sh"
-version="0.8"
-modified="05/03/2020"
-
-# TO DO:
-# BUG: cant handle paths with spaces. so far the makcsv function doesnt appear to write to temp.csv
-#      **THINK I FIXED THIS -- Need lots more testing. go through and parse last projectes
-# --------------------
-# - 1. check if tcp,udp,unique,up and down files are empty - if empty then say 
-# - 2. more check of input file and exit if cant find open it. if no inputfile - exit
-# - 3. better checks for Up/Down hosts
-# - improve web-urls to check for http/https properly 
-# - add check to closed ports if no closed ports than say and dont make file liek the rest
-# - take in xml file do checks and make more vauge... maybe make it pickup from folder location in future 
-# - make the output echo out each host file 
-# - improve closed ports - make a nice table 
-# - better processing output... show lines
-# - create a vesions file  of all the versions which can be looked up
-# - need to make the hosts files better .. dont like the output and the same port sometimes has multiple files
-# - lots more work needed on the output bit at the end  maybe use the ifs
-# - make like a log file - time stats. input swtichees used files es.. all stats ports est
-# - fix the output at the end 
-# - better error handling 
-# - need to check if there is nothing in the file then delete it and sate no hosts
-# - output stating what files been picked up ...list them out ?
-# - fix and check ssl function
-# - closed ports needs sorting 
-# - sort the port files - tcp, udp, unique
-# - have a bit at the end to print the output of files
-# - use less temp files try and keep things consistant in oneliner
-# - tidy up the script make it organised
-# - give the functions desicriptions so know what they are doing 
-# - renames the hosts services for indvidual port file ftp,telnet,ssl,web,http/https/ssl,mysql,oracle,mssql,smb,snmp....est so they are a bit bteer 
-# - create some error checking. file checks for each function. main file checks. fix the switches 
-# - test every switch and options
-# - stop reusing code. make functions for repeats
-# - better input checks. all runs first - giant if statemnt to check switches are valid first
-# - add useful features from OLD nmap-parser
-# - change the if statements so that there is an all function so it will set all the varibles on and create the folder. this needs testing too 
-# - TEST TEST TEST TEST TEST and check the output with lots of different scans and make sure it is all accurate. 
-
-# add parse out versions of stuff and look them up
-# remove duplicates in hosts files 
-# summary seems to show duplicates too 
-# fix web parsing - seems to pickup 3389 - look @ CBS
-# unqiue all the hosts bit 
+version="0.9"
+modified="04/25/2024"
 
 
 #----------------------------------------------------------------- START OF SCRIPT -----------------------------------------------------------------
@@ -119,21 +76,21 @@ echo "			|__] |__| |__/ [__  |___ |__/                   "
 echo "			|    |  | |  \ ___] |___ |  \                   "
 echo "			                                                "
 echo -e "\e[39m\e[0m\e[96mVersion: $version - $modified" 																				 
-echo -e "Created By: Shifty0g 	https://github.com/shifty0g  \e[39m"
+# echo -e "Created By: Shifty0g 	https://github.com/shifty0g  \e[39m"
 echo ""
 }
 
-function footer () {
-# footer to print out at the end of the script 
-echo "--------------------------------------------------------------------------------------"
-echo "				           ___                           "
-echo "				  _  _  .-'   '-.                        "
-echo "				 (.)(.)/         \                       "
-echo "				  /@@             ;                      "
-echo "				 o_\\-mm-......-mm\`~~~~~~~~~~~~~~~~\`   "
-echo "				                                         "                                          
-echo 
-}
+# function footer () {
+# # footer to print out at the end of the script 
+# echo "--------------------------------------------------------------------------------------"
+# echo "				           ___                           "
+# echo "				  _  _  .-'   '-.                        "
+# echo "				 (.)(.)/         \                       "
+# echo "				  /@@             ;                      "
+# echo "				 o_\\-mm-......-mm\`~~~~~~~~~~~~~~~~\`   "
+# echo "				                                         "                                          
+# echo 
+# }
 
 function helpmenu () {
 # prints out the header and help menu when --help switch is selected to show the options to use 
@@ -515,6 +472,45 @@ rm "${outpath}ssltemp" "${outpath}ssltemp2" "$tempfile" > /dev/null 2>&1
 echo
 
 #end
+
+}
+
+function ssh () {
+echo -e "\e[1m\e[93m[>]\e[0m Creating ssh list"
+
+# start fresh
+rm "${outpath}$outputsshfile" "${outpath}sshtemp" > /dev/null 2>&1
+
+# check that the csv file has been created
+checkcsv
+
+for line in $(cat "$tempfile"); do
+	host=$(echo $line | awk -F ',' '{print $1}')
+	port=$(echo $line | awk -F ',' '{print $2}')
+	service=$(echo $line | awk -F ',' '{print $5}')
+	version=$(echo $line | awk -F ',' '{print $6}')
+
+	if [[ "$port" -eq "22" ]]; then echo "${host}:${port}" >> "${outpath}sshtemp"; fi
+	if [[ "$service" == *"ssh"* ]]; then echo "${host}:${port}" >> "${outpath}sshtemp"; fi
+	if [[ "$version" == *"ssh"* ]]; then echo "${host}:${port}" >> "${outpath}sshtemp"; fi
+done
+
+# sort and export
+if [ -f "${outpath}sshtemp" ]; then
+	sort -u "${outpath}sshtemp" | $sortip > "${outpath}$outputsshfile" 2>&1
+	echo "	- $outputsshfile"
+else
+	echo -e "$RED	- no ports found $RESETCOL"
+	rm "${outpath}$outputsshfile" > /dev/null 2>&1
+fi
+
+# cleanup
+rm "${outpath}sshtemp" "$tempfile" > /dev/null 2>&1
+echo
+
+# end
+}
+
 }
 
 function hostports () {
@@ -880,7 +876,7 @@ if [ "$men_htmlreport" == "Y" ]; then htmlreport; fi
 
 
 # print footer once completed 
-footer
+# footer
 
 # if yet print the results 
 printresults
